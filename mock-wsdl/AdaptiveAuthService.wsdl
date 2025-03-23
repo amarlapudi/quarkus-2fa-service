@@ -1,0 +1,38 @@
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://rsa.example.com/adaptive"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             name="AdaptiveAuthService"
+             targetNamespace="http://rsa.example.com/adaptive">
+    <types>
+        <xsd:schema targetNamespace="http://rsa.example.com/adaptive">
+            <xsd:element name="EvaluateRequest" type="xsd:string"/>
+            <xsd:element name="EvaluateResponse" type="xsd:string"/>
+        </xsd:schema>
+    </types>
+    <message name="EvaluateRequest">
+        <part name="parameters" element="tns:EvaluateRequest"/>
+    </message>
+    <message name="EvaluateResponse">
+        <part name="parameters" element="tns:EvaluateResponse"/>
+    </message>
+    <portType name="AdaptiveAuthServicePortType">
+        <operation name="evaluateRisk">
+            <input message="tns:EvaluateRequest"/>
+            <output message="tns:EvaluateResponse"/>
+        </operation>
+    </portType>
+    <binding name="AdaptiveAuthServiceBinding" type="tns:AdaptiveAuthServicePortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="evaluateRisk">
+            <soap:operation soapAction="evaluateRisk"/>
+            <input><soap:body use="literal"/></input>
+            <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+    <service name="AdaptiveAuthService">
+        <port name="AdaptiveAuthServicePort" binding="tns:AdaptiveAuthServiceBinding">
+            <soap:address location="http://localhost:8081/mock-adaptive-auth"/>
+        </port>
+    </service>
+</definitions>

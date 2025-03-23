@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: "2FA Service"
+  version: "1.0.0"
+  description: "Quarkus RESTful microservice for 2FA using RSA Adaptive Authentication"
+paths:
+  /2fa/authenticate:
+    post:
+      summary: "Authenticate user via 2FA"
+      description: "Invokes RSA Adaptive Authentication SOAP service and returns a success/failure result."
+      operationId: authenticateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TwoFactorRequest"
+      responses:
+        "200":
+          description: "2FA authentication result"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwoFactorResponse"
+        "400":
+          description: "Invalid request format"
+        "500":
+          description: "Internal server error"
+components:
+  schemas:
+    TwoFactorRequest:
+      type: object
+      required:
+        - username
+        - ipAddress
+      properties:
+        username:
+          type: string
+          example: "john.doe"
+        ipAddress:
+          type: string
+          example: "192.168.1.100"
+    TwoFactorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Authentication successful"
