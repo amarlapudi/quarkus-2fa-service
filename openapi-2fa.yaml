@@ -7,14 +7,29 @@ paths:
   /2fa/authenticate:
     post:
       summary: "Authenticate user via 2FA"
-      description: "Invokes RSA Adaptive Authentication SOAP service and returns a success/failure result."
+      description: "Invokes RSA Adaptive Authentication SOAP service and returns a success/failure result. The request body is validated for required fields and format constraints. Returns appropriate error responses for validation failures, SOAP service communication errors, and internal server errors."
       operationId: authenticateUser
+      tags:
+        - 2FA Service
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/TwoFactorRequest"
+            examples:
+              validRequest:
+                summary: "Valid authentication request"
+                description: "Example of a valid request with proper username and IPv4 address"
+                value:
+                  username: "john.doe"
+                  ipAddress: "192.168.1.100"
+              validRequestIpv6:
+                summary: "Valid request with IPv6 address"
+                description: "Example of a valid request with IPv6 address"
+                value:
+                  username: "jane.smith"
+                  ipAddress: "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
       responses:
         "200":
           description: "2FA authentication result"
@@ -22,10 +37,120 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TwoFactorResponse"
+              examples:
+                success:
+                  summary: "Successful authentication"
+                  value:
+                    success: true
+                    message: "Authentication successful"
+                failure:
+                  summary: "Failed authentication"
+                  value:
+                    success: false
+                    message: "Authentication failed"
         "400":
-          description: "Invalid request format"
+          description: "Bad Request - Validation error or invalid request format. Returned when request validation fails (e.g., null/blank username, invalid IP address format, missing required fields)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                validationError:
+                  summary: "Validation error with multiple constraint violations"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 400
+                    error: "Validation Error"
+                    message: "Request validation failed"
+                    path: "/2fa/authenticate"
+                    details:
+                      - "Username is required and cannot be blank"
+                      - "IP address must be a valid IPv4 or IPv6 address"
+                missingUsername:
+                  summary: "Missing or blank username"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 400
+                    error: "Validation Error"
+                    message: "Username cannot be null"
+                    path: "/2fa/authenticate"
+                invalidIpAddress:
+                  summary: "Invalid IP address format"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 400
+                    error: "Validation Error"
+                    message: "IP address must be a valid IPv4 or IPv6 address"
+                    path: "/2fa/authenticate"
+        "502":
+          description: "Bad Gateway - Error communicating with RSA SOAP service. Returned when the SOAP client encounters an unexpected error while calling the RSA Adaptive Authentication service."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                communicationError:
+                  summary: "Communication error with SOAP service"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 502
+                    error: "Bad Gateway"
+                    message: "Error communicating with RSA Adaptive Authentication service: Connection refused"
+                    path: "/2fa/authenticate"
+                unexpectedError:
+                  summary: "Unexpected error from SOAP service"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 502
+                    error: "Bad Gateway"
+                    message: "Error communicating with RSA Adaptive Authentication service: Unexpected error occurred"
+                    path: "/2fa/authenticate"
+        "503":
+          description: "Service Unavailable - RSA SOAP service is unavailable or timeout occurred. Returned when the SOAP service cannot be reached (connection refused) or when a timeout occurs while waiting for a response."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                timeout:
+                  summary: "Timeout while calling SOAP service"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 503
+                    error: "Service Unavailable"
+                    message: "Timeout while calling RSA Adaptive Authentication service"
+                    path: "/2fa/authenticate"
+                connectionRefused:
+                  summary: "Connection refused by SOAP service"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 503
+                    error: "Service Unavailable"
+                    message: "Unable to connect to RSA Adaptive Authentication service"
+                    path: "/2fa/authenticate"
         "500":
-          description: "Internal server error"
+          description: "Internal Server Error - An unexpected error occurred in the service. Returned when an unhandled exception occurs during request processing."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                genericError:
+                  summary: "Generic internal server error"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 500
+                    error: "Internal Server Error"
+                    message: "An unexpected error occurred"
+                    path: "/2fa/authenticate"
+                serviceError:
+                  summary: "Service layer error"
+                  value:
+                    timestamp: "2024-01-15T10:30:00.000"
+                    status: 500
+                    error: "Internal Server Error"
+                    message: "An internal server error occurred"
+                    path: "/2fa/authenticate"
 components:
   schemas:
     TwoFactorRequest:
@@ -36,16 +161,74 @@ components:
       properties:
         username:
           type: string
+          description: "Username for 2FA authentication. Must not be null or blank."
           example: "john.doe"
+          minLength: 1
         ipAddress:
           type: string
+          description: "IP address of the user. Must be a valid IPv4 or IPv6 address. Must not be null or blank."
           example: "192.168.1.100"
+          pattern: "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$"
     TwoFactorResponse:
       type: object
       properties:
         success:
           type: boolean
+          description: "Whether the authentication was successful"
           example: true
         message:
           type: string
+          description: "Response message from the authentication service"
           example: "Authentication successful"
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: "Timestamp when the error occurred (ISO 8601 format: yyyy-MM-dd'T'HH:mm:ss.SSS)"
+          example: "2024-01-15T10:30:00.000"
+        status:
+          type: integer
+          format: int32
+          description: "HTTP status code"
+          example: 400
+        error:
+          type: string
+          description: "Error type or category (e.g., 'Validation Error', 'Bad Gateway', 'Service Unavailable', 'Internal Server Error')"
+          example: "Validation Error"
+        message:
+          type: string
+          description: "Human-readable error message describing what went wrong"
+          example: "Request validation failed"
+        path:
+          type: string
+          description: "Request path where the error occurred"
+          example: "/2fa/authenticate"
+        details:
+          type: array
+          description: "Additional error details (e.g., validation error messages). Only present when applicable."
+          items:
+            type: string
+          nullable: true
+          example:
+            - "Username is required and cannot be blank"
+            - "IP address must be a valid IPv4 or IPv6 address"
+    ValidationErrorResponse:
+      allOf:
+        - $ref: "#/components/schemas/ErrorResponse"
+        - type: object
+          description: "Extended error response specifically for validation errors. The details field is guaranteed to be present and non-empty."
+          properties:
+            details:
+              type: array
+              description: "List of validation error messages. Always present for validation errors."
+              items:
+                type: string
+              minItems: 1

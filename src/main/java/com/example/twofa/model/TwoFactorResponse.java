@@ -1,4 +1,4 @@
-package com.example.2fa.model;
+package com.example.twofa.model;
 
 public class TwoFactorResponse {
     private boolean success;
@@ -27,3 +27,4 @@ public class TwoFactorResponse {
         this.message = message;
     }
 }
+
